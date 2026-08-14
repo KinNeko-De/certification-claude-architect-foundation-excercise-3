@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kinneko.de/certification-claude-architect/schemas/recipe-extraction.schema.json",
+  "title": "RecipeExtraction",
+  "description": "Minimal extraction target for a recipe document. All fields are required, using null for facts that are absent from the source document. Demonstrates an enum with an 'other' + free-text detail pattern. This is the schema handed to Claude as the structured-output target, so it is restricted to keywords Claude's json_schema output format supports; the 'other'/detail linkage below is guided only by description text here. See recipe-extraction.validation.schema.json for the full schema that enforces that linkage structurally.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "title",
+    "ingredients",
+    "category",
+    "category_other_detail",
+    "servings",
+    "prep_time_minutes",
+    "calories_kcal",
+    "dietary_flags"
+  ],
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Required. The name of the recipe as stated in the source document."
+    },
+    "ingredients": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" },
+      "description": "Required. The list of ingredient lines as stated in the source document."
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "soup",
+        "appetizer",
+        "main_course",
+        "dessert",
+        "side_dish",
+        "other"
+      ],
+      "description": "Required. The best-fitting category for the recipe. Use 'other' when none of the fixed values fit, and describe it in category_other_detail."
+    },
+    "category_other_detail": {
+      "type": ["string", "null"],
+      "description": "Required, nullable. Free-text category label from the source document, e.g. a German category string that doesn't map to the fixed enum. Must be non-null when category is 'other', and must be null for every other category value."
+    },
+    "servings": {
+      "type": ["integer", "null"],
+      "description": "Required, nullable. Number of servings/portions the recipe yields. Null if not stated in the source document."
+    },
+    "prep_time_minutes": {
+      "type": ["integer", "null"],
+      "description": "Required, nullable. Total preparation time in minutes. Null if not stated in the source document."
+    },
+    "calories_kcal": {
+      "type": ["integer", "null"],
+      "description": "Required, nullable. Calories per serving in kcal. Null if not stated in the source document."
+    },
+    "dietary_flags": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["value", "detail"],
+        "properties": {
+          "value": {
+            "type": "string",
+            "enum": ["vegan", "vegetarian", "other"]
+          },
+          "detail": {
+            "type": ["string", "null"],
+            "description": "Free-text description for this entry, e.g. a flag string that doesn't map to the fixed values. Must be non-null when value is 'other', and must be null otherwise."
+          }
+        }
+      },
+      "description": "Required, may be empty. Dietary/allergen flags that apply to the recipe, as stated in the source document. 'vegan' and 'vegetarian' should each appear at most once, with detail null. Add one entry with value 'other' for each distinct stated flag that doesn't map to the fixed values (e.g. 'gluten-free' and 'nut-free' would be two separate 'other' entries), each with its own detail."
+    }
+  }
+}
