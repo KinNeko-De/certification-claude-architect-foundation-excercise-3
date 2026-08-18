@@ -30,3 +30,12 @@ Related but lower-severity: `prep_time_minutes` is never fabricated (every value
 Planned follow-up:
 - `prep_time_minutes`: add a few-shot example to the prompt to make "always use total time" an explicit, consistent rule.
 - `servings`: use as the worked example for field-level confidence scoring — a field where the model produces a plausible-looking but unstated value instead of `null`.
+
+## Non-instruction text extracted as a step (2026-08-18)
+
+Task: added a `steps` field to both schemas (list of preparation instructions, see [schemas/recipe-extraction.schema.json](schemas/recipe-extraction.schema.json)).
+
+For one recipe the pipeline appended the source document's closing pleasantry, "Enjoy your meal.", as the final entry in `steps` — it's not a preparation instruction.
+
+Planned follow-up:
+- `steps`: add a few-shot example to the field description showing that closing remarks/pleasantries are excluded, and re-run to confirm it resolves this without suppressing genuine final steps (e.g. plating/garnishing instructions, which should stay in).
