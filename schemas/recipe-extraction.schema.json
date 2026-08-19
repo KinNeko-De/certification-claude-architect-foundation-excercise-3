@@ -78,7 +78,7 @@
           }
         }
       },
-      "description": "Required, may be empty. Dietary/allergen flags that apply to the recipe, as stated in the source document. 'vegan' and 'vegetarian' should each appear at most once, with detail null. Add one entry with value 'other' for each distinct stated flag that doesn't map to the fixed values (e.g. 'gluten-free' and 'nut-free' would be two separate 'other' entries), each with its own detail."
+      "description": "Required, may be empty. Dietary/allergen flags that logically apply to the recipe based on its ingredients, whether or not explicitly stated in the source document. 'vegan' and 'vegetarian' should each appear at most once, with detail null. Add one entry with value 'other' for each distinct applicable flag that doesn't map to the fixed values (e.g. 'gluten-free' and 'nut-free' would be two separate 'other' entries), each with its own detail."
     }
   }
 }

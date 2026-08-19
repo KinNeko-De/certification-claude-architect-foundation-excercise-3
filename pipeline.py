@@ -26,7 +26,131 @@ SCHEMA = {k: v for k, v in _raw_schema.items() if k not in ("$schema", "$id")}
 VALIDATION_SCHEMA = json.loads(VALIDATION_SCHEMA_PATH.read_text(encoding="utf-8"))
 
 system_prompt = """
+# Instruction
 Extract the recipe data from an HTML document.
+
+# Prepartion steps
+Split the prepartion description into multiple step that can execute with one action
+
+# Dietary flags
+Goal: The user filter the recipe by their diet or restrictions.
+
+Missing an applicable flag defeats the purpose; list every one that applies, not just the most obvious one.
+
+Only add a flag if it names a diet, restriction, or trend that someone would actively
+filter recipes by (good example: 'high-protein' is a current trend).
+
+Do not add a flag that merely states a nutrition fact about this specific recipe, even if
+true (bad examples: "egg-containing", "high-sugar")
+
+<example>
+  <input>
+    Trockene Inhaltsstoffe:
+      120 g Hafermehl glutenfrei
+      70-100 g Kokosblütenzucker
+      50 g ungesüßtes Kakaopulver
+      1 TL Backpulver
+      ¼ TL Natron
+      ¼ TL Salz
+      90 g vegane Schokodrops
+    Feuchte Zutaten:
+      180 ml Kokosmilch
+      160 g Apfelmus ungesüßt
+      65 g Sonnenblumenkernmus
+      1 EL Apfelessig
+      1 TL Vanilleextrakt
+  </input> 
+
+  <output>
+    "dietary_flags": [
+      {
+        "value": "vegetarian",
+        "detail": null
+      },
+      {
+        "value": "other",
+        "detail": "lacto-vegetarian"
+      },
+      {
+        "value": "other",
+        "detail": "ovo-vegetarian"
+      },
+      {
+        "value": "other",
+        "detail": "pescatarian"
+      },
+      {
+        "value": "vegan",
+        "detail": null
+      },
+      {
+        "value": "other",
+        "detail": "gluten-free"
+      },
+      {
+        "value": "other",
+        "detail": "lactose-free"
+      },
+      {
+        "value": "other",
+        "detail": "dairy-free"
+      },
+      {
+        "value": "other",
+        "detail": "egg-free"
+      },
+      {
+        "value": "other",
+        "detail": "nut-free"
+      },
+      {
+        "value": "other",
+        "detail": "peanut-free"
+      },
+      {
+        "value": "other",
+        "detail": "low-fructose"
+      },
+      {
+        "value": "other",
+        "detail": "yeast-free"
+      }
+    ]
+  </output>
+</example>
+
+<example>
+  <input>
+    1 Steak
+    Salt
+    Pepper
+  </input> 
+
+  <output>
+    "dietary_flags": [
+      {
+        "value": "other",
+        "detail": "low-carb"
+      },
+      {
+        "value": "other",
+        "detail": "ketogenic"
+      },
+      {
+        "value": "other",
+        "detail": "high-protein"
+      },
+      {
+        "value": "other",
+        "detail": "sugar-free"
+      },
+      {
+        "value": "other",
+        "detail": "paleo"
+      }
+    ]
+  </output>
+</example>
 """
 
 def build_retry_prompt(
@@ -54,7 +178,8 @@ async def extract_recipe(html_path: Path, prompt: str) -> dict[str, Any]:
     """
     options = ClaudeAgentOptions(
         model="claude-haiku-4-5",
-        thinking={"type": "disabled"},
+        # thinking={"type": "disabled"},
+        thinking={"type": "adaptive"},
         effort="low",
         system_prompt=system_prompt,
         tools=[],
@@ -170,6 +295,7 @@ async def main() -> None:
         "Hefeklöße.body.html",
         "Klassisches Jägerschnitzel mit Pilzrahmsoße.body.html",
         "Tofu-Gyros Pita mit veganem Tzatziki _ Einfaches Rezept _ Zucker&Jagdwurst.body.html",
+        "How to Cook Spaghetti Squash - Recipes by Love and Lemons.body.html"
     ]
     recipe_paths = [RECIPES_DIR / name for name in recipe_files]
 

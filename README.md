@@ -39,3 +39,15 @@ For one recipe the pipeline appended the source document's closing pleasantry, "
 
 Planned follow-up:
 - `steps`: add a few-shot example to the field description showing that closing remarks/pleasantries are excluded, and re-run to confirm it resolves this without suppressing genuine final steps (e.g. plating/garnishing instructions, which should stay in).
+
+Side note (2026-08-19): enabling thinking (see below) also fixed this on its own — with `thinking={"type": "adaptive"}`, the model excludes "Enjoy your meal." from `steps` without needing the planned few-shot example.
+
+## Dietary flags require thinking enabled (2026-08-19)
+
+Task: iterated on the `dietary_flags` few-shot examples and instructions in [pipeline.py](pipeline.py) so the model infers every applicable diet/restriction from a recipe's ingredients (e.g. "vegan", "gluten-free") rather than only flags stated verbatim in the source, while excluding flags that just state a nutrition fact rather than a real filter criterion ("egg-containing", "high-sugar" — nobody filters recipes by those).
+
+Wording the instruction alone was not enough: with `thinking={"type": "disabled"}`, the model kept applying an overly narrow reading of the instructions no matter how the wording was adjusted, extracting far fewer flags than the examples called for, and independently still emitted disallowed content-fact flags like "egg-containing"/"high-sugar" alongside the wanted ones.
+
+Fix: switched to `thinking={"type": "adaptive"}` (keeping `effort="low"`). With thinking enabled, the same instructions and examples are followed correctly — dietary flags are extracted exhaustively and the disallowed flags disappear.
+
+Takeaway: for instructions that require weighing a rule against a nuanced negative case (not just pattern-matching a few-shot example), wording changes alone may not be enough on `claude-haiku-4-5` — enabling thinking can matter more than further prompt tuning.
