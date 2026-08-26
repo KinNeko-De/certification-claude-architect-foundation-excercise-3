@@ -159,9 +159,6 @@ description explicitly name a diet, restriction, or trend that isn't one of the 
       }
     ]
   </output>
-  <why>
-    'ovo vegetarian' is mention in the description
-  </why>
 </example>
 """
 
