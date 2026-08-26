@@ -70,7 +70,8 @@
         "properties": {
           "value": {
             "type": "string",
-            "enum": ["vegan", "vegetarian", "other"]
+            "enum": ["vegan", "vegetarian", "low-carb", "high-protein", "paleo", "pescatarian", "ketogenic", "other"],
+            "description": "Calculated from the ingredients. Use 'other' when a diet, restriction, or trend is explicitly mentioned in the source document but isn't one of the other enum values."
           },
           "detail": {
             "type": ["string", "null"],

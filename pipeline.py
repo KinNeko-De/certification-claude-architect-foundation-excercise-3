@@ -35,7 +35,7 @@ Split the prepartion description into multiple step that can execute with one ac
 # Dietary flags
 Goal: The user filter the recipe by their diet or restrictions.
 
-Missing an applicable flag defeats the purpose; list every one that applies, not just the most obvious one.
+Base dietary_flags on both the ingredients and the description.
 
 Only add a flag if it names a diet, restriction, or trend that someone would actively
 filter recipes by (good example: 'high-protein' is a current trend).
@@ -43,8 +43,15 @@ filter recipes by (good example: 'high-protein' is a current trend).
 Do not add a flag that merely states a nutrition fact about this specific recipe, even if
 true (bad examples: "egg-containing", "high-sugar")
 
+The fixed values (every value except 'other') may be inferred logically from the ingredients
+or description, even if not stated explicitly. Only use 'other' when the
+description explicitly name a diet, restriction, or trend that isn't one of the fixed values.
+
 <example>
-  <input>
+  <description>
+    Vegane Schokomuffins
+  </description>
+  <ingredient>
     Trockene Inhaltsstoffe:
       120 g Hafermehl glutenfrei
       70-100 g Kokosblütenzucker
@@ -59,7 +66,7 @@ true (bad examples: "egg-containing", "high-sugar")
       65 g Sonnenblumenkernmus
       1 EL Apfelessig
       1 TL Vanilleextrakt
-  </input> 
+  </ingredient> 
 
   <output>
     "dietary_flags": [
@@ -68,88 +75,93 @@ true (bad examples: "egg-containing", "high-sugar")
         "detail": null
       },
       {
-        "value": "other",
-        "detail": "lacto-vegetarian"
-      },
-      {
-        "value": "other",
-        "detail": "ovo-vegetarian"
-      },
-      {
-        "value": "other",
-        "detail": "pescatarian"
-      },
-      {
         "value": "vegan",
         "detail": null
       },
       {
         "value": "other",
         "detail": "gluten-free"
-      },
-      {
-        "value": "other",
-        "detail": "lactose-free"
-      },
-      {
-        "value": "other",
-        "detail": "dairy-free"
-      },
-      {
-        "value": "other",
-        "detail": "egg-free"
-      },
-      {
-        "value": "other",
-        "detail": "nut-free"
-      },
-      {
-        "value": "other",
-        "detail": "peanut-free"
-      },
-      {
-        "value": "other",
-        "detail": "low-fructose"
-      },
-      {
-        "value": "other",
-        "detail": "yeast-free"
       }
     ]
   </output>
 </example>
 
 <example>
-  <input>
+  <description>
+    Leckere Steaks
+  </description>
+  <ingredient>
     1 Steak
     Salt
     Pepper
-  </input> 
+  </ingredient>
 
   <output>
     "dietary_flags": [
       {
-        "value": "other",
-        "detail": "low-carb"
+        "value": "low-carb",
+        "detail": null
       },
       {
-        "value": "other",
-        "detail": "ketogenic"
+        "value": "ketogenic",
+        "detail": null
       },
       {
-        "value": "other",
-        "detail": "high-protein"
+        "value": "high-protein",
+        "detail": null
       },
       {
-        "value": "other",
-        "detail": "sugar-free"
-      },
-      {
-        "value": "other",
-        "detail": "paleo"
+        "value": "paleo",
+        "detail": null
       }
     ]
   </output>
+</example>
+
+<example>
+  <description>
+    Masala Egg Fry
+    in Breakfast, easy, ovo vegetarian, Starters
+  </description>
+  <ingredient>
+    6 eggs
+    cumin seeds a pinch
+    1 tablespoon oil
+    2 sprigs curry leaves
+    salt
+  </ingredient>
+
+  <output>
+    "dietary_flags": [
+      {
+        "value": "vegetarian",
+        "detail": null
+      },
+      {
+        "value": "low-carb",
+        "detail": null
+      },
+      {
+        "value": "ketogenic",
+        "detail": null
+      },
+      {
+        "value": "paleo",
+        "detail": null
+      },
+      {
+        "value": "high-protein",
+        "detail": null
+      },
+      {
+        "value": "other",
+        "detail": "ovo-vegetarian"
+      }
+    ]
+  </output>
+  <why>
+    'ovo vegetarian' is mention in the description
+  </why>
 </example>
 """
 
@@ -177,7 +189,7 @@ async def extract_recipe(html_path: Path, prompt: str) -> dict[str, Any]:
     clean slate rather than accumulating context across files or retries.
     """
     options = ClaudeAgentOptions(
-        model="claude-haiku-4-5",
+        model="claude-sonnet-4-6",
         # thinking={"type": "disabled"},
         thinking={"type": "adaptive"},
         effort="low",
@@ -291,11 +303,12 @@ async def main() -> None:
     OUTPUT_DIR.mkdir(exist_ok=True)
 
     recipe_files = [
-        "Chocolate Crinkles von amerikanisch-kochenDE.body.html",
-        "Hefeklöße.body.html",
-        "Klassisches Jägerschnitzel mit Pilzrahmsoße.body.html",
-        "Tofu-Gyros Pita mit veganem Tzatziki _ Einfaches Rezept _ Zucker&Jagdwurst.body.html",
-        "How to Cook Spaghetti Squash - Recipes by Love and Lemons.body.html"
+        #"Chocolate Crinkles von amerikanisch-kochenDE.body.html",
+        #"Hefeklöße.body.html",
+        #"Klassisches Jägerschnitzel mit Pilzrahmsoße.body.html",
+        #"Tofu-Gyros Pita mit veganem Tzatziki _ Einfaches Rezept _ Zucker&Jagdwurst.body.html",
+        #"How to Cook Spaghetti Squash - Recipes by Love and Lemons.body.html",
+        "Mushy Tapioca (Cassava_Kappa) Recipe _ The take it easy chef.body.html"
     ]
     recipe_paths = [RECIPES_DIR / name for name in recipe_files]
 
