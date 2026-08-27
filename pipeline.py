@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Any
 
 import jsonschema
-from jsonschema.exceptions import best_match
 from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, ResultMessage
 
 ROOT = Path(__file__).parent
@@ -185,18 +184,21 @@ many fields required inference rather than being explicitly stated.
 """
 
 def build_retry_prompt(
-    previous_output: dict[str, Any] | None, error: dict[str, Any] | None
+    previous_output: dict[str, Any] | None, errors: list[dict[str, Any]] | None
 ) -> str:
-    """Build a follow-up prompt including the document, the failed extraction, and the specific error."""
-    assert previous_output is not None and error is not None
+    """Build a follow-up prompt including the document, the failed extraction, and the specific errors."""
+    assert previous_output is not None and errors
     previous_json = json.dumps(previous_output, indent=2, ensure_ascii=False)
-    error_path = ".".join(str(p) for p in error["path"]) or "(root)"
+    error_lines = "\n".join(
+        f"- '{'.'.join(str(p) for p in error['path']) or '(root)'}': {error['message']}"
+        for error in errors
+    )
     return (
         "A previous extraction attempt produced this JSON, which failed schema validation:\n\n"
         f"{previous_json}\n\n"
-        f"Validation error at '{error_path}': {error['message']}\n\n"
+        f"Validation errors:\n{error_lines}\n\n"
         "Correct the extraction so it satisfies the schema. Only change what is needed to "
-        "resolve the validation error; keep every other field as accurate as possible. "
+        "resolve the validation errors; keep every other field as accurate as possible. "
     )
 
 
@@ -230,16 +232,20 @@ async def extract_recipe(html_path: Path, prompt: str) -> dict[str, Any]:
     raise RuntimeError(f"No result received for {html_path.name}")
 
 
-def first_validation_error(data: dict[str, Any]) -> jsonschema.ValidationError | None:
-    """Return the most relevant validation error for data, or None if it validates."""
+def validation_errors(data: dict[str, Any]) -> list[jsonschema.ValidationError]:
+    """Return all distinct validation errors for data (deduped by path + validator)."""
     validator = jsonschema.Draft202012Validator(VALIDATION_SCHEMA)
-    errors = list(validator.iter_errors(data))
-    return best_match(errors) if errors else None
+    seen = set()
+    distinct = []
+    for error in validator.iter_errors(data):
+        signature = (tuple(error.absolute_path), error.validator)
+        if signature not in seen:
+            seen.add(signature)
+            distinct.append(error)
+    return distinct
 
 
-def serialize_error(error: jsonschema.ValidationError | None) -> dict[str, Any] | None:
-    if error is None:
-        return None
+def serialize_error(error: jsonschema.ValidationError) -> dict[str, Any]:
     return {
         "message": error.message,
         "path": list(error.absolute_path),
@@ -252,20 +258,18 @@ def classify_errors(record: dict[str, Any]) -> tuple[list[dict[str, Any]], list[
     attempts = record["attempts"]
     resolved = []
     for i in range(len(attempts) - 1):
-        current = attempts[i]["validation_error"]
-        if current is None:
-            continue
-        nxt = attempts[i + 1]["validation_error"]
-        current_sig = (tuple(current["path"]), current["validator"])
-        next_sig = (tuple(nxt["path"]), nxt["validator"]) if nxt else None
-        if current_sig != next_sig:
-            resolved.append({**current, "resolved_at_attempt": attempts[i + 1]["attempt"]})
+        next_sigs = {
+            (tuple(error["path"]), error["validator"])
+            for error in attempts[i + 1]["validation_errors"]
+        }
+        for error in attempts[i]["validation_errors"]:
+            sig = (tuple(error["path"]), error["validator"])
+            if sig not in next_sigs:
+                resolved.append({**error, "resolved_at_attempt": attempts[i + 1]["attempt"]})
 
     unresolved = []
     if record["final_status"] != "success" and attempts:
-        last_error = attempts[-1]["validation_error"]
-        if last_error is not None:
-            unresolved.append(last_error)
+        unresolved = list(attempts[-1]["validation_errors"])
 
     return resolved, unresolved
 
@@ -281,12 +285,12 @@ async def extract_and_validate_with_retries(html_path: Path) -> dict[str, Any]:
     }
 
     previous_output: dict[str, Any] | None = None
-    previous_error: dict[str, Any] | None = None
+    previous_errors: list[dict[str, Any]] | None = None
 
     for attempt in range(1, MAX_ATTEMPTS + 1):
         prompt = f"Recipe:\n\n{html}\n\n"
         if attempt > 1:
-            prompt = prompt + build_retry_prompt(previous_output, previous_error)
+            prompt = prompt + build_retry_prompt(previous_output, previous_errors)
 
         try:
             data = await extract_recipe(html_path, prompt)
@@ -295,24 +299,26 @@ async def extract_and_validate_with_retries(html_path: Path) -> dict[str, Any]:
                 {
                     "attempt": attempt,
                     "output": None,
-                    "validation_error": {"message": str(e), "path": [], "validator": "llm_call"},
+                    "validation_errors": [
+                        {"message": str(e), "path": [], "validator": "llm_call"}
+                    ],
                 }
             )
             break
 
-        error = first_validation_error(data)
-        serialized_error = serialize_error(error)
+        errors = validation_errors(data)
+        serialized_errors = [serialize_error(error) for error in errors]
         record["attempts"].append(
-            {"attempt": attempt, "output": data, "validation_error": serialized_error}
+            {"attempt": attempt, "output": data, "validation_errors": serialized_errors}
         )
 
-        if error is None:
+        if not errors:
             record["final_status"] = "success"
             record["output"] = data
             break
 
         previous_output = data
-        previous_error = serialized_error
+        previous_errors = serialized_errors
 
     record["resolved_errors"], record["unresolved_errors"] = classify_errors(record)
     return record
@@ -322,12 +328,12 @@ async def main() -> None:
     OUTPUT_DIR.mkdir(exist_ok=True)
 
     recipe_files = [
-        #"Chocolate Crinkles von amerikanisch-kochenDE.body.html",
+        "Chocolate Crinkles von amerikanisch-kochenDE.body.html",
         "Hefeklöße.body.html",
-        #"Klassisches Jägerschnitzel mit Pilzrahmsoße.body.html",
-        #"Tofu-Gyros Pita mit veganem Tzatziki _ Einfaches Rezept _ Zucker&Jagdwurst.body.html",
-        #"How to Cook Spaghetti Squash - Recipes by Love and Lemons.body.html",
-        #"Mushy Tapioca (Cassava_Kappa) Recipe _ The take it easy chef.body.html"
+        "Klassisches Jägerschnitzel mit Pilzrahmsoße.body.html",
+        "Tofu-Gyros Pita mit veganem Tzatziki _ Einfaches Rezept _ Zucker&Jagdwurst.body.html",
+        "How to Cook Spaghetti Squash - Recipes by Love and Lemons.body.html",
+        "Mushy Tapioca (Cassava_Kappa) Recipe _ The take it easy chef.body.html"
     ]
     recipe_paths = [RECIPES_DIR / name for name in recipe_files]
 
