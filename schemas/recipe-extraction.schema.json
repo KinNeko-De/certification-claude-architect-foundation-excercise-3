@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kinneko.de/certification-claude-architect/schemas/recipe-extraction.schema.json",
   "title": "RecipeExtraction",
-  "description": "Minimal extraction target for a recipe document. All fields are required, using null for facts that are absent from the source document. Demonstrates an enum with an 'other' + free-text detail pattern. This is the schema handed to Claude as the structured-output target, so it is restricted to keywords Claude's json_schema output format supports; the 'other'/detail linkage below is guided only by description text here. See recipe-extraction.validation.schema.json for the full schema that enforces that linkage structurally.",
+  "description": "Minimal extraction target for a recipe document. Every field is wrapped as an object carrying its extracted 'value' alongside a 'confidence' score, used to route low-confidence extractions to human review; array fields score each entry individually. All values use null for facts that are absent from the source document. Demonstrates an enum with a 'value'/'detail' + free-text pattern for category and dietary_flags. This is the schema handed to Claude as the structured-output target, so it is restricted to keywords Claude's json_schema output format supports; the 'other'/detail linkage below is guided only by description text here. See recipe-extraction.validation.schema.json for the full schema that enforces that linkage structurally.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -10,63 +10,200 @@
     "ingredients",
     "steps",
     "category",
-    "category_other_detail",
     "servings",
     "prep_time_minutes",
     "calories_kcal",
-    "dietary_flags"
+    "dietary_flags",
+    "overall_confidence"
   ],
   "properties": {
     "title": {
-      "type": "string",
-      "description": "Required. The name of the recipe as stated in the source document."
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "confidence"],
+      "properties": {
+        "value": {
+          "type": "string",
+          "description": "Required. The name of the recipe as stated in the source document."
+        },
+        "confidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["score"],
+          "properties": {
+            "score": {
+              "type": "number",
+              "description": "Confidence that 'value' is correct, from 0.0 (a guess, not supported by the source) to 1.0 (explicitly and unambiguously stated in the source document)."
+            }
+          }
+        }
+      },
+      "description": "Required. The recipe's title, with confidence."
     },
     "ingredients": {
       "type": "array",
       "minItems": 1,
-      "items": { "type": "string" },
-      "description": "Required. The list of ingredient lines as stated in the source document."
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["value", "confidence"],
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "One ingredient line as stated in the source document."
+          },
+          "confidence": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["score"],
+            "properties": {
+              "score": {
+                "type": "number",
+                "description": "Confidence that this ingredient line is correctly and completely extracted from the source, from 0.0 (a guess) to 1.0 (explicitly and unambiguously stated)."
+              }
+            }
+          }
+        }
+      },
+      "description": "Required. The list of ingredient lines as stated in the source document, each with its own confidence."
     },
     "steps": {
       "type": "array",
       "minItems": 1,
-      "items": { "type": "string" },
-      "description": "Required. The preparation steps as stated in the source document, one instruction per entry, in the order they should be performed."
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["value", "confidence"],
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "One preparation instruction, in the order it should be performed."
+          },
+          "confidence": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["score"],
+            "properties": {
+              "score": {
+                "type": "number",
+                "description": "Confidence that this is a genuine preparation instruction, correctly extracted from the source (e.g. not a closing pleasantry), from 0.0 (a guess) to 1.0 (explicitly and unambiguously stated)."
+              }
+            }
+          }
+        }
+      },
+      "description": "Required. The preparation steps as stated in the source document, one instruction per entry, in the order they should be performed, each with its own confidence."
     },
     "category": {
-      "type": "string",
-      "enum": [
-        "soup",
-        "appetizer",
-        "main_course",
-        "dessert",
-        "side_dish",
-        "other"
-      ],
-      "description": "Required. The best-fitting category for the recipe. Use 'other' when none of the fixed values fit, and describe it in category_other_detail."
-    },
-    "category_other_detail": {
-      "type": ["string", "null"],
-      "description": "Required, nullable. Free-text category label from the source document, e.g. a German category string that doesn't map to the fixed enum. Must be non-null when category is 'other', and must be null for every other category value."
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "detail", "confidence"],
+      "properties": {
+        "value": {
+          "type": "string",
+          "enum": [
+            "soup",
+            "appetizer",
+            "main_course",
+            "dessert",
+            "side_dish",
+            "other"
+          ],
+          "description": "Required. The best-fitting category for the recipe. Use 'other' when none of the fixed values fit, and describe it in detail."
+        },
+        "detail": {
+          "type": ["string", "null"],
+          "description": "Free-text category label from the source document, e.g. a German category string that doesn't map to the fixed enum. Must be non-null when value is 'other', and must be null for every other value."
+        },
+        "confidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["score"],
+          "properties": {
+            "score": {
+              "type": "number",
+              "description": "Confidence that this category assignment is correct, from 0.0 (a guess) to 1.0 (explicitly stated or an unambiguous fit)."
+            }
+          }
+        }
+      },
+      "description": "Required. The recipe's category, with confidence."
     },
     "servings": {
-      "type": ["integer", "null"],
-      "description": "Required, nullable. Number of servings/portions the recipe yields. Null if not stated in the source document."
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "confidence"],
+      "properties": {
+        "value": {
+          "type": ["integer", "null"],
+          "description": "Number of servings/portions the recipe yields. Null if not stated in the source document."
+        },
+        "confidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["score"],
+          "properties": {
+            "score": {
+              "type": "number",
+              "description": "Confidence that 'value' is correct, from 0.0 (a guess, not supported by the source) to 1.0 (explicitly and unambiguously stated). A null value should score high when the source clearly omits a serving count, and lower when it's unclear whether it's truly absent."
+            }
+          }
+        }
+      },
+      "description": "Required, value nullable. Number of servings/portions, with confidence."
     },
     "prep_time_minutes": {
-      "type": ["integer", "null"],
-      "description": "Required, nullable. Total preparation time in minutes. Null if not stated in the source document."
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "confidence"],
+      "properties": {
+        "value": {
+          "type": ["integer", "null"],
+          "description": "Total preparation time in minutes. Null if not stated in the source document."
+        },
+        "confidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["score"],
+          "properties": {
+            "score": {
+              "type": "number",
+              "description": "Confidence that 'value' is correct, from 0.0 (a guess, not supported by the source) to 1.0 (explicitly and unambiguously stated). A null value should score high when the source clearly omits a prep time, and lower when it's unclear whether it's truly absent."
+            }
+          }
+        }
+      },
+      "description": "Required, value nullable. Total preparation time in minutes, with confidence."
     },
     "calories_kcal": {
-      "type": ["integer", "null"],
-      "description": "Required, nullable. Calories per serving in kcal. Null if not stated in the source document."
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "confidence"],
+      "properties": {
+        "value": {
+          "type": ["integer", "null"],
+          "description": "Calories per serving in kcal. Null if not stated in the source document."
+        },
+        "confidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["score"],
+          "properties": {
+            "score": {
+              "type": "number",
+              "description": "Confidence that 'value' is correct, from 0.0 (a guess, not supported by the source) to 1.0 (explicitly and unambiguously stated). A null value should score high when the source clearly omits calories, and lower when it's unclear whether it's truly absent."
+            }
+          }
+        }
+      },
+      "description": "Required, value nullable. Calories per serving in kcal, with confidence."
     },
     "dietary_flags": {
       "type": "array",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["value", "detail"],
+        "required": ["value", "detail", "confidence"],
         "properties": {
           "value": {
             "type": "string",
@@ -76,10 +213,33 @@
           "detail": {
             "type": ["string", "null"],
             "description": "Free-text description for this entry, e.g. a flag string that doesn't map to the fixed values. Must be non-null when value is 'other', and must be null otherwise."
+          },
+          "confidence": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["score"],
+            "properties": {
+              "score": {
+                "type": "number",
+                "description": "Confidence that this specific dietary flag genuinely applies, from 0.0 (a guess) to 1.0 (explicitly stated or an unambiguous inference from the ingredients)."
+              }
+            }
           }
         }
       },
-      "description": "Required, may be empty. Dietary/allergen flags that logically apply to the recipe based on its ingredients, whether or not explicitly stated in the source document. 'vegan' and 'vegetarian' should each appear at most once, with detail null. Add one entry with value 'other' for each distinct applicable flag that doesn't map to the fixed values (e.g. 'gluten-free' and 'nut-free' would be two separate 'other' entries), each with its own detail."
+      "description": "Required, may be empty. Dietary/allergen flags that logically apply to the recipe based on its ingredients, whether or not explicitly stated in the source document. 'vegan' and 'vegetarian' should each appear at most once, with detail null. Add one entry with value 'other' for each distinct applicable flag that doesn't map to the fixed values (e.g. 'gluten-free' and 'nut-free' would be two separate 'other' entries), each with its own detail and confidence."
+    },
+    "overall_confidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["score"],
+      "properties": {
+        "score": {
+          "type": "number",
+          "description": "Required. Your own holistic judgment of confidence in the extraction as a whole, from 0.0 to 1.0. Form this independently - do not just average or copy the per-field confidence scores above; weigh things like overall document clarity and how many fields required inference rather than being explicitly stated."
+        }
+      },
+      "description": "Required. Overall confidence in the entire extraction, independent of the per-field scores."
     }
   }
 }

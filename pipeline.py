@@ -160,6 +160,28 @@ description explicitly name a diet, restriction, or trend that isn't one of the 
     ]
   </output>
 </example>
+
+# Confidence
+Goal: route low-confidence extractions to human review, so scores must reflect genuine
+uncertainty rather than being uniformly high.
+
+- 1.0: the value is explicitly and unambiguously stated in the source document.
+- Mid-range: the value is a reasonable inference, not stated outright (e.g. a dietary flag
+  inferred from the ingredients rather than named in the text).
+- Near 0.0: the value is essentially a guess, or was extracted from something that only
+  superficially resembles the requested fact (e.g. a UI control's default value).
+
+A `null` value should itself score high when the source clearly does not mention the fact
+at all, and lower when it is unclear whether the fact is truly absent or just wasn't found.
+
+Use the full range. Most extractions will not be a perfect 1.0 - reserve that for text
+copied verbatim from an explicit, unambiguous statement in the source, and score everything
+else accordingly.
+
+In addition to the per-field scores, also give an `overall_confidence` for the extraction
+as a whole. Form this as your own independent, holistic judgment - do not simply average or
+copy the per-field scores. Weigh things like the source document's overall clarity and how
+many fields required inference rather than being explicitly stated.
 """
 
 def build_retry_prompt(
@@ -301,11 +323,11 @@ async def main() -> None:
 
     recipe_files = [
         #"Chocolate Crinkles von amerikanisch-kochenDE.body.html",
-        #"Hefeklöße.body.html",
+        "Hefeklöße.body.html",
         #"Klassisches Jägerschnitzel mit Pilzrahmsoße.body.html",
         #"Tofu-Gyros Pita mit veganem Tzatziki _ Einfaches Rezept _ Zucker&Jagdwurst.body.html",
         #"How to Cook Spaghetti Squash - Recipes by Love and Lemons.body.html",
-        "Mushy Tapioca (Cassava_Kappa) Recipe _ The take it easy chef.body.html"
+        #"Mushy Tapioca (Cassava_Kappa) Recipe _ The take it easy chef.body.html"
     ]
     recipe_paths = [RECIPES_DIR / name for name in recipe_files]
 
