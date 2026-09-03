@@ -170,8 +170,12 @@
     "fieldConfidence": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["score"],
+      "required": ["justification", "score"],
       "properties": {
+        "justification": {
+          "type": "string",
+          "minLength": 1
+        },
         "score": {
           "type": "number",
           "minimum": 0,

@@ -172,6 +172,12 @@ description explicitly name a diet, restriction, or trend that isn't one of the 
 Goal: route low-confidence extractions to human review, so scores must reflect genuine
 uncertainty rather than being uniformly high.
 
+Each confidence object carries a `justification` before its `score`. Write the
+justification first, stating the concrete evidence for or against the value (or naming
+the inference you made). Then set the score so it actually follows from that
+justification - do not write a justification describing uncertainty or inference and
+then still assign a 1.0.
+
 - 1.0: the value is explicitly and unambiguously stated in the source document.
 - Mid-range: the value is a reasonable inference, not stated outright (e.g. a dietary flag
   inferred from the ingredients rather than named in the text).

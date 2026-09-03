@@ -29,11 +29,15 @@
         "confidence": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["score"],
+          "required": ["justification", "score"],
           "properties": {
+            "justification": {
+              "type": "string",
+              "description": "Brief (one sentence) explanation of the evidence for or against this value, or the inference being made."
+            },
             "score": {
               "type": "number",
-              "description": "Confidence that 'value' is correct, from 0.0 (a guess, not supported by the source) to 1.0 (explicitly and unambiguously stated in the source document)."
+              "description": "Confidence that 'value' is correct, from 0.0 (a guess, not supported by the source) to 1.0 (explicitly and unambiguously stated in the source document). Must be consistent with the justification above."
             }
           }
         }
@@ -55,11 +59,15 @@
           "confidence": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["score"],
+            "required": ["justification", "score"],
             "properties": {
+              "justification": {
+                "type": "string",
+                "description": "Brief (one sentence) explanation of the evidence for or against this value, or the inference being made."
+              },
               "score": {
                 "type": "number",
-                "description": "Confidence that this ingredient line is correctly and completely extracted from the source, from 0.0 (a guess) to 1.0 (explicitly and unambiguously stated)."
+                "description": "Confidence that this ingredient line is correctly and completely extracted from the source, from 0.0 (a guess) to 1.0 (explicitly and unambiguously stated). Must be consistent with the justification above."
               }
             }
           }
@@ -82,11 +90,15 @@
           "confidence": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["score"],
+            "required": ["justification", "score"],
             "properties": {
+              "justification": {
+                "type": "string",
+                "description": "Brief (one sentence) explanation of the evidence for or against this value, or the inference being made."
+              },
               "score": {
                 "type": "number",
-                "description": "Confidence that this is a genuine preparation instruction, correctly extracted from the source (e.g. not a closing pleasantry), from 0.0 (a guess) to 1.0 (explicitly and unambiguously stated)."
+                "description": "Confidence that this is a genuine preparation instruction, correctly extracted from the source (e.g. not a closing pleasantry), from 0.0 (a guess) to 1.0 (explicitly and unambiguously stated). Must be consistent with the justification above."
               }
             }
           }
@@ -118,11 +130,15 @@
         "confidence": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["score"],
+          "required": ["justification", "score"],
           "properties": {
+            "justification": {
+              "type": "string",
+              "description": "Brief (one sentence) explanation of the evidence for or against this value, or the inference being made."
+            },
             "score": {
               "type": "number",
-              "description": "Confidence that this category assignment is correct, from 0.0 (a guess) to 1.0 (explicitly stated or an unambiguous fit)."
+              "description": "Confidence that this category assignment is correct, from 0.0 (a guess) to 1.0 (explicitly stated or an unambiguous fit). Must be consistent with the justification above."
             }
           }
         }
@@ -141,11 +157,15 @@
         "confidence": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["score"],
+          "required": ["justification", "score"],
           "properties": {
+            "justification": {
+              "type": "string",
+              "description": "Brief (one sentence) explanation of the evidence for or against this value, or the inference being made."
+            },
             "score": {
               "type": "number",
-              "description": "Confidence that 'value' is correct, from 0.0 (a guess, not supported by the source) to 1.0 (explicitly and unambiguously stated). A null value should score high when the source clearly omits a serving count, and lower when it's unclear whether it's truly absent."
+              "description": "Confidence that 'value' is correct, from 0.0 (a guess, not supported by the source) to 1.0 (explicitly and unambiguously stated). A null value should score high when the source clearly omits a serving count, and lower when it's unclear whether it's truly absent. Must be consistent with the justification above."
             }
           }
         }
@@ -164,11 +184,15 @@
         "confidence": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["score"],
+          "required": ["justification", "score"],
           "properties": {
+            "justification": {
+              "type": "string",
+              "description": "Brief (one sentence) explanation of the evidence for or against this value, or the inference being made."
+            },
             "score": {
               "type": "number",
-              "description": "Confidence that 'value' is correct, from 0.0 (a guess, not supported by the source) to 1.0 (explicitly and unambiguously stated). A null value should score high when the source clearly omits a prep time, and lower when it's unclear whether it's truly absent."
+              "description": "Confidence that 'value' is correct, from 0.0 (a guess, not supported by the source) to 1.0 (explicitly and unambiguously stated). A null value should score high when the source clearly omits a prep time, and lower when it's unclear whether it's truly absent. Must be consistent with the justification above."
             }
           }
         }
@@ -187,11 +211,15 @@
         "confidence": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["score"],
+          "required": ["justification", "score"],
           "properties": {
+            "justification": {
+              "type": "string",
+              "description": "Brief (one sentence) explanation of the evidence for or against this value, or the inference being made."
+            },
             "score": {
               "type": "number",
-              "description": "Confidence that 'value' is correct, from 0.0 (a guess, not supported by the source) to 1.0 (explicitly and unambiguously stated). A null value should score high when the source clearly omits calories, and lower when it's unclear whether it's truly absent."
+              "description": "Confidence that 'value' is correct, from 0.0 (a guess, not supported by the source) to 1.0 (explicitly and unambiguously stated). A null value should score high when the source clearly omits calories, and lower when it's unclear whether it's truly absent. Must be consistent with the justification above."
             }
           }
         }
@@ -217,11 +245,15 @@
           "confidence": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["score"],
+            "required": ["justification", "score"],
             "properties": {
+              "justification": {
+                "type": "string",
+                "description": "Brief (one sentence) explanation of the evidence for or against this value, or the inference being made."
+              },
               "score": {
                 "type": "number",
-                "description": "Confidence that this specific dietary flag genuinely applies, from 0.0 (a guess) to 1.0 (explicitly stated or an unambiguous inference from the ingredients)."
+                "description": "Confidence that this specific dietary flag genuinely applies, from 0.0 (a guess) to 1.0 (explicitly stated or an unambiguous inference from the ingredients). Must be consistent with the justification above."
               }
             }
           }
@@ -232,11 +264,15 @@
     "overall_confidence": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["score"],
+      "required": ["justification", "score"],
       "properties": {
+        "justification": {
+          "type": "string",
+          "description": "Brief explanation of your holistic judgment - e.g. overall document clarity, how many fields required inference."
+        },
         "score": {
           "type": "number",
-          "description": "Required. Your own holistic judgment of confidence in the extraction as a whole, from 0.0 to 1.0. Form this independently - do not just average or copy the per-field confidence scores above; weigh things like overall document clarity and how many fields required inference rather than being explicitly stated."
+          "description": "Required. Your own holistic judgment of confidence in the extraction as a whole, from 0.0 to 1.0. Form this independently - do not just average or copy the per-field confidence scores above; weigh things like overall document clarity and how many fields required inference rather than being explicitly stated. Must be consistent with the justification above."
         }
       },
       "description": "Required. Overall confidence in the entire extraction, independent of the per-field scores."
