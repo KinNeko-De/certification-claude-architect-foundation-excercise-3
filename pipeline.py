@@ -2,21 +2,29 @@
 """Structured data extraction pipeline for recipe HTML files."""
 
 import asyncio
+import html as html_lib
 import json
+import re
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import jsonschema
 from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, ResultMessage
 
 ROOT = Path(__file__).parent
 RECIPES_DIR = ROOT / "recipes"
+RAW_DIR = RECIPES_DIR / "raw"
 SCHEMA_PATH = ROOT / "schemas" / "recipe-extraction.schema.json"
 VALIDATION_SCHEMA_PATH = ROOT / "schemas" / "recipe-extraction.validation.schema.json"
 OUTPUT_DIR = ROOT / "output"
 LOGS_DIR = OUTPUT_DIR / "logs"
+
+OG_SITE_NAME_RE = re.compile(r'property="og:site_name"\s+content="([^"]*)"')
+CANONICAL_URL_RE = re.compile(r'rel="canonical"\s+href="([^"]*)"')
+OG_URL_RE = re.compile(r'property="og:url"\s+content="([^"]*)"')
 
 MAX_ATTEMPTS = 3
 
@@ -183,6 +191,33 @@ copy the per-field scores. Weigh things like the source document's overall clari
 many fields required inference rather than being explicitly stated.
 """
 
+def get_source_site(html_path: Path) -> str:
+    """Determine the source website for a recipe from its raw HTML head metadata.
+
+    The .body.html files fed to the LLM have had <head> stripped, so this reads
+    the sibling full-page save in recipes/raw/ instead.
+    """
+    raw_path = RAW_DIR / (html_path.name.removesuffix(".body.html") + ".htm")
+    raw_html = raw_path.read_text(encoding="utf-8", errors="ignore")
+
+    site_match = OG_SITE_NAME_RE.search(raw_html)
+    if site_match:
+        return html_lib.unescape(site_match.group(1))
+
+    url_match = CANONICAL_URL_RE.search(raw_html) or OG_URL_RE.search(raw_html)
+    if url_match:
+        hostname = urlparse(html_lib.unescape(url_match.group(1))).hostname
+        if hostname:
+            return hostname
+
+    return "unknown"
+
+
+def sanitize_folder_name(name: str) -> str:
+    """Make a source-site name safe to use as a Windows folder name."""
+    return re.sub(r'[<>:"/\\|?*]', "_", name).strip()
+
+
 def build_retry_prompt(
     previous_output: dict[str, Any] | None, errors: list[dict[str, Any]] | None
 ) -> str:
@@ -344,12 +379,14 @@ async def main() -> None:
         report_recipes.append(record)
 
         if record["final_status"] == "success":
+            site_dir = OUTPUT_DIR / sanitize_folder_name(get_source_site(html_path))
+            site_dir.mkdir(parents=True, exist_ok=True)
             output_name = html_path.name.removesuffix(".body.html") + ".json"
-            output_path = OUTPUT_DIR / output_name
+            output_path = site_dir / output_name
             output_path.write_text(
                 json.dumps(record["output"], indent=2, ensure_ascii=False), encoding="utf-8"
             )
-            print(f"Wrote {output_path.name} ({len(record['attempts'])} attempt(s))")
+            print(f"Wrote {output_path.relative_to(OUTPUT_DIR)} ({len(record['attempts'])} attempt(s))")
         else:
             print(
                 f"Failed {html_path.name} after {len(record['attempts'])} attempt(s); "
